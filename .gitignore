@@ -1,0 +1,22 @@
+
+data/raw/*
+Xenium/*
+*.ome.tif
+*.csv.gz
+*.zarr.zip
+
+
+*.h5ad
+*.h5
+*.rds
+
+*/results/*
+*/figures/*
+06_benchmarking/*/results/*
+!*/results/.gitkeep
+
+# ignore Python/Jupyter artifacts
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
