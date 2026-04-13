@@ -5,7 +5,7 @@ This repository contains a Python-based computational workflow for analysing spa
 This pipeline integrates multi-omics data (spatial coordinates, transcriptomics and H&E images) to derive systems-level insights into tumor organisation and signalling interactions.
 
 ## Pipeline Architecture
-The project is structured sequentially to process raw spatial data through to spatial cell graph construction and algorithm benchmarking:
+The project is structured sequentially to process raw spatial data through to spatial cell graph construction and CCC method benchmarking:
 
 * **`01_resegmentation/`**: Scripts for cell boundary resegmentation using Cellpose-Proseg. Scaled to process full 2x1cm histological slides.
 * **`02_preprocessing/`**: Quality control, data normalisation and spatial transformation scripts.
