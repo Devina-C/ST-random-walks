@@ -20,3 +20,6 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 .DS_Store
+data/processed/*.csv
+data/processed/*.geojson
+03_celltyping/data/*.csv
