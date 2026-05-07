@@ -1,5 +1,7 @@
 ## Unveiling cell-cell communication using random walks in spatial transcriptomic networks pipeline
 
+This project is an ongoing investigation into graph-based modelling of cell–cell interactions in tumour microenvironments.
+
 This repository contains a Python-based computational workflow for analysing spatial transcriptomics data, with a focus on unveiling cell-cell communication (CCC) within the tumor microenvironment.
 
 This pipeline integrates multi-omics data (spatial coordinates, transcriptomics and H&E images) to derive systems-level insights into tumor organisation and signalling interactions.
