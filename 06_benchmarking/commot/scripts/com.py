@@ -19,8 +19,8 @@ adata = ad.read_h5ad("/scratch/users/k22026807/masters/project/celltyping/cellty
 adata.var_names_make_unique()
 
 # preprocessing
-sc.pp.normalize_total(adata, inplace=True)
-sc.pp.log1p(adata)
+#sc.pp.normalize_total(adata, inplace=True)
+#sc.pp.log1p(adata)
 
 # pull LR pair database from CellChat
 df_ligrec = ct.pp.ligand_receptor_database(database='CellChat', species='human')

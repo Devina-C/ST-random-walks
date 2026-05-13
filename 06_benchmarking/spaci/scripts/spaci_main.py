@@ -63,7 +63,7 @@ print("Inferring spatial communication (this may take time)...")
 spaci_obj.run_spaci(
     distance_threshold=200, 
     n_jobs=20,        # Optimized for your HPC login/interrupt nodes
-    min_cells=5       # Minimum cells expressing LR pair
+    min_cells=3       # Minimum cells expressing LR pair
 )
 
 # Step 3: Save results

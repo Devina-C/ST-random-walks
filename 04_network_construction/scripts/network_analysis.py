@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 plt.show = lambda: None
 
 # setup
-path = "/scratch/users/k22026807/masters/project/spatial_discovery/network"
+path = "/scratch/users/k22026807/masters/project/graphs//network"
 os.chdir(path)
 os.makedirs('figures', exist_ok=True)
 
@@ -213,7 +213,7 @@ else:
     node_metrics_df['closeness_centrality'] = pd.Series(metrics['clos_cen'])
     node_metrics_df['betweenness_centrality'] = pd.Series(metrics['bet_cen'])
     node_metrics_df['cell_type'] = cell_types
-    node_metrics_df.to_csv(f'figures/node_metrics_fullslide.csv')
+    node_metrics_df.to_csv(f'figures/node_metrics.csv')
     print("Full slide node metrics saved.")
 
 print("\nFinished.")

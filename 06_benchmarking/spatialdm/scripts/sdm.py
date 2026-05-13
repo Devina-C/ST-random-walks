@@ -4,7 +4,6 @@ import os
 import pandas as pd
 import numpy as np
 import anndata as ad
-import spatialdata as sd
 import spatialdm as sdm
 import spatialdm.plottings as pl
 import matplotlib.pyplot as plt
@@ -34,7 +33,6 @@ if not hasattr(pd, '_is_patched'):
 # Load spatial and expression data
 print("loading data...")
 adata = ad.read_h5ad("/scratch/users/k22026807/masters/project/celltyping/celltype_output/BC_prime/refined_annotations.h5ad")
-adata.raw = adata
 
 # Subset to region of interest
 with open('/scratch/users/k22026807/masters/project/alignment/region1_xenium.geojson') as f:

@@ -1,26 +1,23 @@
+# data and results
+data/
+Xenium/
+**/results/
+**/figures/
+**/*.zarr
+**/*.zarr.zip
+**/*.h5ad
+**/*.zip
+**/*.tif
+**/*.png
+**/*.csv
+**/*.geojson
+**/*.pkl
+**/*.pptx
 
-data/raw/*
-Xenium/*
-*.ome.tif
-*.csv.gz
-*.zarr.zip
+# archives and old scripts
+**/archive
 
-
-*.h5ad
-*.h5
-*.rds
-
-*/results/*
-*/figures/*
-06_benchmarking/*/results/*
-!*/results/.gitkeep
-
-# ignore Python/Jupyter artifacts
-__pycache__/
+# python based
+**/__pycache__
 *.pyc
-.ipynb_checkpoints/
-.DS_Store
-data/processed/*.csv
-data/processed/*.geojson
-03_celltyping/data/*.csv
-*.ipynb
+
