@@ -1,6 +1,6 @@
 #### NCEM ####
 # node-centric expression models (GNN)
-# graph - radius-based (50um)
+# graph - radius-based (100um)
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # use cpu
@@ -142,13 +142,13 @@ graph_adata = customLoader(
     adata=adata,
     patient='sample_dummy',
     library_id='sample_dummy',
-    radius=200,
+    radius=1, #ignored - set by squidpy below
     cluster='cell_type')
 
 sq.gr.spatial_neighbors(
     adata,
     coord_type='generic',
-    radius=50.0,          # ~7 neighbours — comparable to paper density
+    radius=100.0,
     key_added='spatial_knn'
 )
 
@@ -206,7 +206,7 @@ ax.set_xlabel('X (um)'); ax.set_ylabel('Y (um)')
 ax.set_aspect('equal')
 ax.legend(markerscale=4, fontsize=7, bbox_to_anchor=(1.01, 1), loc='upper left')
 plt.tight_layout()
-plt.savefig('figures/spatial_graph_overlay.png', dpi=300,
+plt.savefig('figures/spatial_graph_overlay.png', dpi=600,
             bbox_inches='tight', facecolor='white')
 plt.close()
 
@@ -398,13 +398,13 @@ if estimator.model.training_model is None:
 if not SKIP_TRAINING:
     print("Training NCEM GNN...")
     estimator.train(
-        epochs=200,
+        epochs=250,
         batch_size=1,
         max_steps_per_epoch=500,     # limits steps per epoch for large datasets
         patience=30,                # early stopping patience
         lr_schedule_min_lr=1e-5,
         lr_schedule_factor=0.2,
-        lr_schedule_patience=15,
+        lr_schedule_patience=20,
         early_stopping=True,
         reduce_lr_plateau=True,
         log_dir='models/ncem_logs',
@@ -584,7 +584,7 @@ def patched_target_cell_saliencies(self, target_cell_type, drop_columns=None,
             h_0_full   = []
             a          = []
 
-            MAX_STEPS_PER_CT = 100
+            MAX_STEPS_PER_CT = 150
             step_count = 0
 
             for _step, (x_batch, _y_batch) in enumerate(ds):

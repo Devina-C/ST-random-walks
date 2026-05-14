@@ -1,17 +1,16 @@
-## Unveiling cell-cell communication using random walks in spatial transcriptomic networks pipeline
+## Unveiling cell-cell communication using random walks in spatial transcriptomics networks
 
-This project is an ongoing investigation into graph-based modelling of cell–cell interactions in tumour microenvironments.
+This repository contains the pipeline and code used in my master's project. Analysis was performed on publicly available Xenium FFPE Human Breast Cancer data.
 
-This repository contains a Python-based computational workflow for analysing spatial transcriptomics data, with a focus on unveiling cell-cell communication (CCC) within the tumor microenvironment.
+## Overview
+This project explores cell-cell communication (CCC) in the tumour microenvironment using random walks. It benchmarks these methods against commonly used CCC tools which adopt differing statistical and graph-based approaches to model ligand-receptor interactions. 
 
-
-## Pipeline Architecture
-The project is structured to process raw spatial data through to spatial cell graph construction and CCC method benchmarking:
-
-* **`01_resegmentation/`**: Scripts for cell boundary resegmentation using Cellpose-Proseg. Scaled to process full 2x1cm histological slides.
-* **`02_preprocessing/`**: Quality control, data normalisation and spatial transformation scripts.
-* **`03_celltyping/`**: Workflow for marker-based cell type assignment and spatial mapping.
-* **`04_network_construction/`**: Graph-based modeling of the spatial microenvironment.
-* **`05_random_walks/`**: Implementation of random walk approaches to investigate signalling interactions.
-* **`06_benchmarking/`**: An evaluation module comparing multiple CCC methods (`COMMOT`, `NCEM`, `SpaCI`, `SpatialDM`, `Squidpy`, `stLearn`) to assess consistency of inferred interactions.
+## Pipeline
+* **`01_preprocessing/`**: Quality control, data normalisation and spatial data integration using the [MOSAIK](https://github.com/anthbapt/MOSAIK) workflow.
+* **`02_cell_typing/`**:  Workflow for marker-based cell type assignment and spatial mapping.
+* **`03_roi_extraction/`**: Scripts for ROI coordinate transformation; initially obtained from Xenium Explorer and converted to GeoJSON for downstream analysis.
+* **`04_network_construction/`**: Spatial graph construction using a disparity filter. Compared against other methods, such as radius-based, k-Nearest Neighbours and Delaunay Triangulation.
+* **`05_random_walks/`**: Implementation of random walk approaches to investigate cellular interactions.
+* **`06_benchmarking/`**: An evaluation of current CCC methods (`COMMOT`, `NCEM`, `SpaCI`, `SpatialDM`, `Squidpy`, `stLearn`).
 * **`tools/`**: Custom utility functions.
+* **`resegmentation/`**: Scripts for cell boundary segmentation using Cellpose and Proseg, scaled to process whole-slide images via a tiling approach. 

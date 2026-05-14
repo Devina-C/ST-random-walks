@@ -35,7 +35,7 @@ from PIL import Image
 # ── Config ────────────────────────────────────────────────────────────────────
 
 XENIUM_ZARR = "/scratch/users/k22026807/masters/project/xenium_output/BC_prime.zarr"
-MERGED_NPY  = "data/merged/merged_masks_filtered.npy"
+MERGED_NPY  = "data/merged/merged_masks.npy"
 OUT_DIR     = "data/merged/viz"
 os.makedirs(OUT_DIR, exist_ok=True)
 

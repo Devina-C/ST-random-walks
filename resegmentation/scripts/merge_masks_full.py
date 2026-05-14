@@ -2,13 +2,12 @@
 """
 merge_masks_full.py
 ===================
-Full merge and deduplication of all 31 original patches with seam lattice masks.
+Full merge and deduplication of all 31 original patches with boundary masks.
 
 Uses cell_labels_reseg (raw Cellpose pixel masks) for the pixel canvas and
 deduplication. Shapes are derived from the merged pixel canvas using rasterio.
 
-This is the original working approach that produced correct results.
-Proseg refinement is deferred to transcript assignment stage.
+Proseg refinement is moved to transcript assignment stage.
 
 Output:
   data/merged/merged_masks.npy          — global DS pixel label array (37473, 25633)
@@ -335,24 +334,38 @@ def merge_canvases(patch_canvas, seam_canvas):
 
 # ── Phase 4: Derive shapes ────────────────────────────────────────────────────
 
-def derive_shapes(merged, chunk_rows=2000):
+def derive_shapes(merged, chunk_rows=2000, overlap=100):
     """
     Derive pixel-accurate polygon boundaries from merged pixel canvas.
-    Uses rasterio.features.shapes — vectorised C-level, one pass per chunk.
-    Much faster than find_contours per cell.
-    Returns GeoDataFrame in DS coords.
+    Uses overlapping chunks — each chunk extends by OVERLAP rows into
+    neighbouring chunks. Only shapes whose centroid falls in the core
+    (non-overlap) region are kept from each chunk, ensuring each cell
+    appears complete in exactly one chunk. No MultiPolygons, no splits,
+    no information loss.
     """
     print("\n=== Phase 4: Deriving polygon shapes ===")
+    print(f"  Array shape: {merged.shape}, dtype={merged.dtype}")
+    print(f"  Overlapping chunks: chunk_rows={chunk_rows}, overlap={overlap}")
+
+    n_chunks = (GLOBAL_H + chunk_rows - 1) // chunk_rows
     all_polys = []
     all_ids   = []
-    n_chunks  = (GLOBAL_H + chunk_rows - 1) // chunk_rows
+    seen_ids  = set()  # track which cell_ids have been collected
 
     for chunk_idx in tqdm(range(n_chunks), desc="Deriving shapes"):
-        y0   = chunk_idx * chunk_rows
-        y1   = min(y0 + chunk_rows, GLOBAL_H)
-        crop = merged[y0:y1, :].astype(np.int32)
+        # Core region — where this chunk "owns" cells
+        core_y0 = chunk_idx * chunk_rows
+        core_y1 = min(core_y0 + chunk_rows, GLOBAL_H)
 
-        transform = from_bounds(0, y0, GLOBAL_W, y1, GLOBAL_W, y1 - y0)
+        # Extended region — adds overlap on both sides
+        ext_y0 = max(0, core_y0 - overlap)
+        ext_y1 = min(GLOBAL_H, core_y1 + overlap)
+
+        crop = merged[ext_y0:ext_y1, :].astype(np.int32)
+
+        # Offset transform so coordinates are in global DS space
+        transform = from_bounds(
+            0, ext_y0, GLOBAL_W, ext_y1, GLOBAL_W, ext_y1 - ext_y0)
 
         for geom, val in rasterio_shapes(
                 crop,
@@ -360,22 +373,43 @@ def derive_shapes(merged, chunk_rows=2000):
                 transform=transform):
             if val == 0:
                 continue
+            cell_id = int(val)
+
+            # skip if already collected from a previous chunk
+            if cell_id in seen_ids:
+                continue
+
             poly = shapely.geometry.shape(geom)
             if poly.is_empty:
                 continue
-            all_polys.append(poly)
-            all_ids.append(int(val))
 
-        del crop
-        gc.collect()
+            # only keep if centroid falls in core region
+            # ensures each cell is claimed by exactly one chunk
+            cy = poly.centroid.y
+            if not (core_y0 <= cy < core_y1):
+                continue
+
+            all_polys.append(poly)
+            all_ids.append(cell_id)
+            seen_ids.add(cell_id)
+
+        del crop; gc.collect()
 
     gdf = gpd.GeoDataFrame({'cell_id': all_ids}, geometry=all_polys, crs=None)
-    print(f"Derived {len(gdf)} cell polygons")
+    print(f"Derived {len(gdf):,} cell polygons")
 
-    # ── Shape filter ──────────────────────────────────────────────────
+    # Verify no duplicates
+    n_dupes = gdf['cell_id'].duplicated().sum()
+    print(f"  Duplicate cell_ids: {n_dupes} (should be 0)")
+
+    # Check geometry types
+    geom_types = gdf.geometry.geom_type.value_counts().to_dict()
+    print(f"  Geometry types: {geom_types}")
+
+    # ── Shape quality filter ──────────────────────────────────────────────────
     print("Applying shape quality filters...")
+
     DS_UM = 0.425
-     # Convert to microns for area threshold
     gdf['area_um2']     = gdf.geometry.area * (DS_UM ** 2)
     gdf['convexity']    = gdf.geometry.area / gdf.geometry.convex_hull.area
     bounds              = gdf.geometry.bounds
@@ -388,17 +422,15 @@ def derive_shapes(merged, chunk_rows=2000):
     mask = (
         (gdf['area_um2']     >= 25.0)   &
         (gdf['area_um2']     <= 5000.0) &
-        (gdf['convexity']    >= 0.7)    &
+        (gdf['convexity']    >= 0.85)    &
         (gdf['aspect_ratio'] <= 10.0)
     )
     gdf = gdf[mask].copy().reset_index(drop=True)
     print(f"  Removed {n_before - len(gdf):,} shapes "
           f"({(n_before-len(gdf))/n_before*100:.1f}%)")
     print(f"  Remaining: {len(gdf):,} shapes")
-    
-    # Drop helper columns — keep geometry and cell_id only
-    gdf = gdf[['cell_id', 'geometry']].copy()
 
+    gdf = gdf[['cell_id', 'geometry']].copy()
     return gdf
 
 
@@ -554,8 +586,17 @@ def build_complete_zarr(merged, gdf, df_stats):
     # ── 7e: Build count matrix ────────────────────────────────────────────────
     t = time.time()
     ts("  7e: Building cell × gene count matrix...")
-    genes    = sorted(assigned_v['feature_name'].unique())
-    cell_ids = sorted(assigned_v['cell_id'].astype(int).unique().tolist())
+    genes    = sorted(assigned_v['feature_name'].unique())    
+    assigned_cell_ids = set(assigned_v['cell_id'].astype(int).unique())
+    shape_cell_ids    = set(gdf_final['cell_id'].astype(int).unique())
+    cell_ids          = sorted(assigned_cell_ids & shape_cell_ids)
+    
+    assigned_v = assigned_v[
+        assigned_v['cell_id'].astype(int).isin(set(cell_ids))].copy()
+    ts(f"    Intersection: {len(cell_ids):,} cells in both transcripts and shapes")
+    ts(f"    Dropped: {len(assigned_cell_ids - shape_cell_ids):,} transcript-only cells")
+    ts(f"    Dropped: {len(shape_cell_ids - assigned_cell_ids):,} shape-only cells")
+
     n_cells  = len(cell_ids)
     n_genes  = len(genes)
     ts(f"    {n_cells:,} cells × {n_genes:,} genes")
@@ -568,7 +609,6 @@ def build_complete_zarr(merged, gdf, df_stats):
     assigned_v['row_idx'] = assigned_v['cell_id'].astype(int).map(cell_idx)
     assigned_v = assigned_v[assigned_v['row_idx'].notna()].copy()
     assigned_v['col_idx'] = assigned_v['feature_name'].map(gene_idx)
-
 
     rows = assigned_v['row_idx'].astype(int).values
     cols = assigned_v['col_idx'].astype(int).values
@@ -583,17 +623,15 @@ def build_complete_zarr(merged, gdf, df_stats):
     t = time.time()
     ts("  7f: Building AnnData table...")
 
-    # Align gdf_final to exactly the cell_ids in the count matrix
     gdf_final_aligned = gdf_final[
         gdf_final['cell_id'].astype(int).isin(cell_ids)].copy()
     gdf_final_aligned['cell_id_int'] = gdf_final_aligned['cell_id'].astype(int)
     gdf_final_aligned = gdf_final_aligned.set_index('cell_id_int').loc[cell_ids]
     gdf_final_aligned = gdf_final_aligned.reset_index(drop=True)
 
-    ts(f"  Aligned shapes: {len(gdf_final_aligned):,} (matrix: {n_cells:,})")
+    ts(f"    Aligned shapes: {len(gdf_final_aligned):,} (matrix: {n_cells:,})")
     assert len(gdf_final_aligned) == n_cells, \
-        f"Shape mismatch: {len(gdf_final_aligned)} shapes vs {n_cells} matrix rows"
-
+        f"Still mismatched: {len(gdf_final_aligned)} vs {n_cells}"
 
     obs = pd.DataFrame({
         'cell_id':        [str(c) for c in cell_ids],
@@ -628,8 +666,7 @@ def build_complete_zarr(merged, gdf, df_stats):
 
     # Shapes — filtered, in microns
     shapes_sd = ShapesModel.parse(
-        gdf_final_aligned[['geometry']].copy(),
-        transformations={'global': Identity()})
+        gdf_final_aligned[['geometry']].copy())
 
     # Points — all QV>=20 gene transcripts
     tx_pts = pd.read_parquet(
@@ -640,6 +677,7 @@ def build_complete_zarr(merged, gdf, df_stats):
     tx_pts = tx_pts[tx_pts['qv'] >= 20].copy()
     tx_pts = tx_pts.rename(columns={'feature_name': 'gene'})
     tx_pts['transcript_id'] = tx_pts['transcript_id'].astype(str)
+    tx_pts = tx_pts.reset_index(drop=True)
     points_sd = PointsModel.parse(
         tx_pts,
         coordinates={'x': 'x', 'y': 'y', 'z': 'z'},
