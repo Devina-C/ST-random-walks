@@ -1,16 +1,36 @@
 ## Unveiling cell-cell communication using random walks in spatial transcriptomics networks
 
-This repository contains the pipeline and code used in my master's project. Analysis was performed on publicly available Xenium FFPE Human Breast Cancer data.
+This repository contains the pipeline and code used in my master's project for analysing cell-cell communication (CCC) in spatial transcriptomics data using graph-based random walk methods. 
 
-## Overview
-This project explores cell-cell communication (CCC) in the tumour microenvironment using random walks. It benchmarks these methods against commonly used CCC tools which adopt differing statistical and graph-based approaches to model ligand-receptor interactions. 
+The workflow involves spatial transcriptomics preprocessing, cell type annotation, spatial graph construction and CCC analysis. Approaches are benchmarked against alternative CCC frameworks for inference of ligand-receptor interactions. 
 
-## Pipeline
-* **`01_preprocessing/`**: Quality control, data normalisation and spatial data integration using the [MOSAIK](https://github.com/anthbapt/MOSAIK) workflow.
-* **`02_cell_typing/`**:  Workflow for marker-based cell type assignment and spatial mapping.
-* **`03_roi_extraction/`**: Scripts for ROI coordinate transformation; initially obtained from Xenium Explorer and converted to GeoJSON for downstream analysis.
-* **`04_network_construction/`**: Spatial graph construction using a disparity filter. Compared against other methods, such as radius-based, k-Nearest Neighbours and Delaunay Triangulation.
-* **`05_random_walks/`**: Implementation of random walk approaches to investigate cellular interactions.
-* **`06_benchmarking/`**: An evaluation of current CCC methods (`COMMOT`, `NCEM`, `SpaCI`, `SpatialDM`, `Squidpy`, `stLearn`).
-* **`tools/`**: Custom utility functions.
-* **`resegmentation/`**: Scripts for cell boundary segmentation using Cellpose and Proseg, scaled to process whole-slide images via a tiling approach. 
+In addition, an exploratory resegmentation workflow was developed to assess transcript-aware whole-slide cell segmentation using Cellpose and Proseg. 
+
+## Structure
+**`resegmentation/`**: Scripts for whole-slide cell segmentation using **Cellpose** and **Proseg**, scaled using a tiling approach.
+
+*Note: The resegmented outputs were used for methodological development not for downstream analysis.*
+  
+**`01_preprocessing/`**: Quality control, data normalisation and spatial data integration using the [MOSAIK](https://github.com/anthbapt/MOSAIK) workflow.
+
+**`02_cell_typing/`**:  Workflow for marker-based cell type annotation and spatial mapping.
+
+**`03_roi_extraction/`**: Scripts for ROI coordinate transformation; initially obtained from Xenium Explorer and converted to GeoJSON for downstream analysis.
+
+**`04_network_construction/`**: Construction and comparison of spatial graphs using:
+* disparity filtering
+* radius-based
+* k-nearest neighbours (kNN)
+* Delaunay triangulation.
+
+**`05_random_walks/`**: Implementation of random walk approaches to investigate cellular interactions. *Note: In progress.*
+
+**`06_benchmarking/`**: An evaluation against established spatial analysis and  CCC methods:
+* COMMOT
+* NCEM
+* SpaCI
+* SpatialDM
+* Squidpy
+* stLearn
+
+**`tools/`**: Custom utility functions.
