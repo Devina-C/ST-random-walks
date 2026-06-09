@@ -207,6 +207,67 @@ else:
     graph_measure = graph_properties([graph_full], [pos_dict_full])
     metrics = graph_measure[0]
 
+    # export disparity graph for rwr
+    print("\nExporting disparity graph for rwr...")
+
+    cell_ids = adata_ct.obs_names.tolist()
+    mapping = {i: cell_ids[i] for i in range(len(cell_ids))}
+    graph_mxr = nx.relabel_nodes(graph_full, mapping)
+
+    components = list(nx.connected_components(graph_mxr))
+    largest = max(components, key=len)
+    print(f"Components: {len(components)}, "
+          f"largest: {len(largest)} / {graph_mxr.number_of_nodes()} nodes")
+
+    # Write weighted edge list (no header)
+    mxr_dir = 'multixrank_input'
+    os.makedirs(f'{mxr_dir}/network', exist_ok=True)
+
+    edges_df = pd.DataFrame(
+        [(u, v, d['weight']) for u, v, d in graph_mxr.edges(data=True)],
+        columns=['source', 'target', 'weight']
+    )
+    edges_df.to_csv(f'{mxr_dir}/network/cells.tsv',
+                    sep='\t', index=False, header=False)
+    print(f"Wrote {len(edges_df)} edges to {mxr_dir}/network/cells.tsv")
+
+    # Write seeds — example: all malignant cells. Change as needed.
+    seed_mask = adata_ct.obs['cell_type'] == 'Malignant cell'
+    seed_ids_all = adata_ct.obs_names[seed_mask].tolist()
+
+    # Only keep seeds that survived as nodes in the disparity backbone
+    graph_nodes = set(graph_mxr.nodes())
+    seed_ids = [s for s in seed_ids_all if s in graph_nodes]
+
+    print(f"Malignant cells total: {len(seed_ids_all)}, "
+          f"in graph: {len(seed_ids)}")
+
+    if len(seed_ids) == 0:
+        print("WARNING: no malignant-cell seeds present in disparity graph.")
+
+    # Write config
+    config_yaml = """seed: seeds.txt
+
+r: 0.7
+
+multiplex:
+  1:
+    layers:
+      - network/cells.tsv
+    graph_type:
+      - "01"
+    delta: 0
+    tau:
+      - 1.0
+
+eta:
+  - 1.0
+"""
+
+    with open(f'{mxr_dir}/config.yml', 'w') as f:
+        f.write(config_yaml)
+    print(f"Config written to {mxr_dir}/config.yml")
+
     node_metrics_df = pd.DataFrame(index=range(len(pos)))
     node_metrics_df['clustering_coef'] = pd.Series(metrics['clus'])
     node_metrics_df['degree_centrality'] = pd.Series(metrics['deg_cen'])

@@ -1,6 +1,6 @@
 #### NCEM ####
 # node-centric expression models (GNN)
-# graph - radius-based (100um)
+# graph - radius-based (200um)
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # use cpu
@@ -148,7 +148,7 @@ graph_adata = customLoader(
 sq.gr.spatial_neighbors(
     adata,
     coord_type='generic',
-    radius=100.0,
+    radius=200.0,
     key_added='spatial_knn'
 )
 
@@ -175,7 +175,7 @@ degrees = np.array(
 
 fig, ax = plt.subplots(figsize=(7,5), facecolor='white')
 ax.hist(degrees, bins=40, color='steelblue', edgecolor='white')
-ax.set_xlabel('Node degree (neighbors within 50um)')
+ax.set_xlabel('Node degree')
 ax.set_ylabel('Number of cells')
 ax.set_title('Spatial Graph Degree Distribution', fontsize=12, fontweight='bold')
 ax.axvline(degrees.mean(), color='firebrick', linestyle='--', label=f'Mean = {degrees.mean():.1f}')
@@ -201,7 +201,7 @@ for ct, col in custom_palette.items():
     if mask.sum() > 0:
         ax.scatter(pos[mask, 0], pos[mask, 1], s=1, c=col,
                    label=ct, alpha=0.8, rasterized=True)
-ax.set_title('Spatial Graph (50 um radius)', fontsize=12, fontweight='bold')
+ax.set_title('Spatial Graph', fontsize=12, fontweight='bold')
 ax.set_xlabel('X (um)'); ax.set_ylabel('Y (um)')
 ax.set_aspect('equal')
 ax.legend(markerscale=4, fontsize=7, bbox_to_anchor=(1.01, 1), loc='upper left')
