@@ -3,10 +3,11 @@
 # graph - radius-based (200um)
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # use cpu
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # use gpu
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
 os.environ["TF_XLA_FLAGS"] = "--tf_xla_auto_jit=0" # disable XLA
 
+import time
 import logging
 import warnings
 warnings.filterwarnings("ignore")
@@ -28,7 +29,7 @@ import types
 import scipy.sparse as sparse_sci
 import squidpy as sq
 
-SKIP_TRAINING = False
+SKIP_TRAINING = True
 
 gpus = tf.config.list_physical_devices('GPU')
 print(f"DEBUG: Found {len(gpus)} GPUs") 
@@ -326,6 +327,9 @@ estimator.split_data_node(
     test_split=0.1,
     seed=42)
 
+print([a for a in dir(estimator) if 'test' in a.lower() or 'eval' in a.lower() or 'val' in a.lower()])
+
+
 print("Building model architecture...")
 
 
@@ -397,6 +401,7 @@ if estimator.model.training_model is None:
 
 if not SKIP_TRAINING:
     print("Training NCEM GNN...")
+    t0_train = time.time()
     estimator.train(
         epochs=250,
         batch_size=1,
@@ -409,6 +414,10 @@ if not SKIP_TRAINING:
         reduce_lr_plateau=True,
         log_dir='models/ncem_logs',
         )
+    train_time = time.time() - t0_train
+    print(f"Training time: {train_time:.1f}s ({train_time/60:.1f} min)")
+    pd.DataFrame([{'train_time_seconds': train_time}]).to_csv(
+        'results/ncem_train_runtime.csv', index=False)
 
     os.makedirs('models', exist_ok=True)
     estimator.model.training_model.save_weights('models/ncem_weights.h5')
@@ -423,14 +432,14 @@ else:
 
 print("Evaluating model...")
 
-# evaluate_any requires explicit img_keys and node_idx
+# --- Evaluation on training partition (kept for reference / overfitting check) ---
 try:
     eval_dict = estimator.evaluate_any(
         img_keys=estimator.img_keys_train,
         node_idx=estimator.nodes_idx_train,
         batch_size=1,
     )
-    print("Evaluation metrics:", eval_dict)
+    print("Evaluation metrics (train):", eval_dict)
     pd.DataFrame([eval_dict]).to_csv('results/eval_metrics.csv', index=False)
 except TypeError:
     results = estimator.model.training_model.evaluate(
@@ -444,8 +453,39 @@ except TypeError:
         verbose=0
     )
     eval_dict = {'loss': float(results) if np.isscalar(results) else float(results[0])}
-    print("Evaluation metrics:", eval_dict)
+    print("Evaluation metrics (train):", eval_dict)
     pd.DataFrame([eval_dict]).to_csv('results/eval_metrics.csv', index=False)
+
+# --- Evaluation on held-out test partition ---
+# NOTE: there is only ever one "image" (img_key='sample1'), so held-out test
+# cells are identified by node index (nodes_idx_test), not by a separate
+# image key. img_keys_test is intentionally empty in bind_custom_ncem_data
+# since there is no second image — the correct call reuses img_keys_train
+# together with the held-out nodes_idx_test produced by split_data_node.
+print("Evaluating model on held-out test partition...")
+try:
+    eval_dict_test = estimator.evaluate_any(
+        img_keys=estimator.img_keys_train,
+        node_idx=estimator.nodes_idx_test,
+        batch_size=1,
+    )
+    print("Test evaluation metrics:", eval_dict_test)
+    pd.DataFrame([eval_dict_test]).to_csv('results/eval_metrics_test.csv', index=False)
+except TypeError:
+    results_test = estimator.model.training_model.evaluate(
+        estimator._get_dataset(
+            image_keys=estimator.img_keys_train,
+            nodes_idx=estimator.nodes_idx_test,
+            batch_size=1,
+            shuffle_buffer_size=None,
+            train=False,
+        ),
+        verbose=0
+    )
+    eval_dict_test = {'loss': float(results_test) if np.isscalar(results_test) else float(results_test[0])}
+    print("Test evaluation metrics:", eval_dict_test)
+    pd.DataFrame([eval_dict_test]).to_csv('results/eval_metrics_test.csv', index=False)
+
 
 # Training curve
 history = estimator.history
@@ -674,11 +714,13 @@ interpreter.target_cell_saliencies = types.MethodType(
 # Returns DataFrame: rows=sender cell types, cols=image keys
 print("Attempting saliency computation...")
 coupling_rows = {}
+saliency_times = {}
 
 priority_cell_types = cell_types  # all cell types
 print(f"Priority cell types: {priority_cell_types}")
 
 for target_ct in priority_cell_types:
+    t0_sal = time.time()
     try:
         sal_df = interpreter.target_cell_saliencies(
             target_cell_type=target_ct,
@@ -688,6 +730,13 @@ for target_ct in priority_cell_types:
         print(f"  Saliencies computed for: {target_ct}")
     except Exception as e:
         print(f"  Saliencies failed for {target_ct}: {e}")
+    saliency_times[target_ct] = time.time() - t0_sal
+    print(f"    ({saliency_times[target_ct]:.1f}s)")
+
+pd.DataFrame(list(saliency_times.items()), columns=['cell_type', 'seconds']) \
+    .to_csv('results/ncem_saliency_runtimes.csv', index=False)
+total_saliency_time = sum(saliency_times.values())
+print(f"Total saliency time: {total_saliency_time:.1f}s ({total_saliency_time/3600:.2f} hours)")
 
 if coupling_rows:
     import seaborn as sns
