@@ -24,3 +24,5 @@ Xenium/
 05_random_walks/multixrank_input/
 
 05_random_walks/scripts/validations/
+02_cell_typing/*.pdf
+02_cell_typing/scripts/he_zoom_viz.py
