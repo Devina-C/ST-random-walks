@@ -22,3 +22,5 @@ Xenium/
 *.pyc
 
 05_random_walks/multixrank_input/
+
+05_random_walks/scripts/validations/
