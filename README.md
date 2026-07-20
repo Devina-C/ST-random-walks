@@ -23,14 +23,12 @@ In addition, an exploratory resegmentation workflow was developed to assess tran
 * k-nearest neighbours (kNN)
 * Delaunay triangulation.
 
-**`05_random_walks/`**: Implementation of random walk approaches to investigate cellular interactions. *Note: In progress.*
+**`05_random_walks/`**: Implementation of random walk approaches to investigate cellular interactions.
 
 **`06_benchmarking/`**: An evaluation against established spatial analysis and  CCC methods:
 * COMMOT
 * NCEM
 * SpaCI
 * SpatialDM
-* Squidpy
 * stLearn
 
-**`tools/`**: Custom utility functions.
