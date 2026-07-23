@@ -5,10 +5,6 @@ framework for spatial cell-cell communication (CCC) inference,
 including graph-based diffusion scoring and three statistical null models 
 tested for significance.
 
-This folder was restructured to keep only the scripts that produced the results reported in the thesis. 
-Exploratory and superseded variants were removed or archived locally.
-
-
 ## Structure
 
 ```
@@ -19,7 +15,7 @@ scripts/
 │   ├── estimate_lambda_per_sender.py  (shared: feeds λ into BH correction)
 │   ├── generate_decoy_pairs.py        (shared: generates ~3000 decoy pairs)
 │   ├── cell_level/          single-cell resolution nulls
-│   └── spot_level/          spot-level (SpaFlow-style) null
+│   └── spot_level/          spot-level null
 └── validations/             not tracked in this repo (see .gitignore)
 ```
 
