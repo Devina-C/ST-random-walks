@@ -1,4 +1,4 @@
-# 02_cell_typing
+# Cell Type Annotation
 
 Cell type annotation using CellTypist, biomarker confirmation and neighbourhood-consensus refinement.
 
