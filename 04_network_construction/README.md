@@ -1,6 +1,6 @@
-# 04_network_construction
+# Network construction
 
-Construction and comparison of spatial graph representations of the tissue (Section 2.4 / 3.3 of the thesis): k-nearest-neighbour, Delaunay triangulation, fixed-radius, and disparity-filtered graphs.
+Construction and comparison of spatial graph representations of the tissue: k-nearest-neighbour, Delaunay triangulation, fixed-radius, and disparity-filtered graphs.
 
 ## Contents
 
